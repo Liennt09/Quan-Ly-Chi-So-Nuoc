@@ -1,0 +1,69 @@
+{
+  "entities": {
+    "Area": {
+      "title": "Area",
+      "description": "Khu vực quản lý",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "Tên khu vực" }
+      },
+      "required": ["name"]
+    },
+    "SubLocation": {
+      "title": "SubLocation",
+      "description": "Vị trí con trong khu vực",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "Tên vị trí" },
+        "areaId": { "type": "string", "description": "ID khu vực cha" }
+      },
+      "required": ["name", "areaId"]
+    },
+    "Meter": {
+      "title": "Meter",
+      "description": "Đồng hồ nước",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "Tên đồng hồ" },
+        "subLocationId": { "type": "string", "description": "ID vị trí con" },
+        "waterType": { "type": "string", "enum": ["Khai thác", "Tiêu thụ"] },
+        "isSubMeter": { "type": "boolean", "description": "Đánh dấu là đồng hồ con" }
+      },
+      "required": ["name", "subLocationId", "waterType", "isSubMeter"]
+    },
+    "Reading": {
+      "title": "Reading",
+      "description": "Bản ghi chỉ số nước",
+      "type": "object",
+      "properties": {
+        "areaId": { "type": "string" },
+        "subLocationId": { "type": "string" },
+        "meterId": { "type": "string" },
+        "waterType": { "type": "string" },
+        "meterReading": { "type": "number" },
+        "recordDate": { "type": "string", "format": "date" },
+        "enteredBy": { "type": "string" },
+        "reporter": { "type": "string" },
+        "note": { "type": "string" },
+        "usage": { "type": "number" }
+      },
+      "required": ["areaId", "subLocationId", "meterId", "meterReading", "recordDate", "reporter"]
+    },
+    "Reporter": {
+      "title": "Reporter",
+      "description": "Người báo cáo",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" }
+      },
+      "required": ["name"]
+    }
+  },
+  "firestore": {
+    "/areas": { "schema": "Area", "description": "Danh sách khu vực" },
+    "/sub_locations": { "schema": "SubLocation", "description": "Danh sách vị trí con" },
+    "/meters": { "schema": "Meter", "description": "Danh sách đồng hồ" },
+    "/readings": { "schema": "Reading", "description": "Lịch sử chỉ số" },
+    "/reporters": { "schema": "Reporter", "description": "Danh sách người báo cáo" }
+  }
+}

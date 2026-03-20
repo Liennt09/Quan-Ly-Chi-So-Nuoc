@@ -1,0 +1,63 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    // Area: { name: string }
+    // SubLocation: { name: string, areaId: string }
+    // Meter: { name: string, subLocationId: string, waterType: string }
+    // Reading: { areaId, subLocationId, meterId, waterType, meterReading, recordDate, enteredBy, reporter, note, usage }
+    // Reporter: { name: string }
+    // ===============================================================
+
+    // Helper Functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && 
+        (request.auth.token.email == "vuchauanh19@gmail.com" && request.auth.token.email_verified == true);
+    }
+
+    function isValidString(val, min, max) {
+      return val is string && val.size() >= min && val.size() <= max;
+    }
+
+    function isValidNumber(val, min) {
+      return val is number && val >= min;
+    }
+
+    // Rules for each collection
+    match /areas/{areaId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    match /sub_locations/{subId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    match /meters/{meterId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    match /reporters/{reporterId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    match /readings/{readingId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && 
+        isValidNumber(request.resource.data.meterReading, 0) &&
+        isValidString(request.resource.data.recordDate, 10, 10);
+      allow update: if isAuthenticated() && 
+        (isAdmin() || request.auth.token.email == resource.data.enteredBy);
+      allow delete: if isAdmin();
+    }
+  }
+}
