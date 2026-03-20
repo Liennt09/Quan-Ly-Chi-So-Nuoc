@@ -1,6 +1,6 @@
 import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { auth, db } from './firebase';
-import { onAuthStateChanged, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
+import { onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
 import { 
   collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, 
   query, orderBy, serverTimestamp, Timestamp, getDocFromServer 
@@ -59,6 +59,11 @@ export default function App() {
   const [user, setUser] = useState<any>(null);
   const [authReady, setAuthReady] = useState(false);
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [isRegistering, setIsRegistering] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [authLoading, setAuthLoading] = useState(false);
 
   // Data state
   const [areas, setAreas] = useState<Area[]>([]);
@@ -211,29 +216,110 @@ export default function App() {
     }
   };
 
+  const handleAuth = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthError(null);
+    setAuthLoading(true);
+    try {
+      if (isRegistering) {
+        await createUserWithEmailAndPassword(auth, email, password);
+      } else {
+        await signInWithEmailAndPassword(auth, email, password);
+      }
+    } catch (err: any) {
+      console.error('Auth error:', err);
+      let msg = 'Có lỗi xảy ra khi đăng nhập.';
+      if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
+        msg = 'Email hoặc mật khẩu không chính xác.';
+      } else if (err.code === 'auth/email-already-in-use') {
+        msg = 'Email này đã được sử dụng.';
+      } else if (err.code === 'auth/weak-password') {
+        msg = 'Mật khẩu quá yếu (tối thiểu 6 ký tự).';
+      } else if (err.code === 'auth/invalid-email') {
+        msg = 'Email không hợp lệ.';
+      }
+      setAuthError(msg);
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
   if (!authReady) return <Loading />;
 
   if (!user) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
         <div className="max-w-md w-full bg-white rounded-3xl shadow-2xl shadow-blue-100 border border-slate-100 overflow-hidden">
-          <div className="p-12 flex flex-col items-center text-center">
-            <div className="w-20 h-20 bg-blue-600 rounded-2xl flex items-center justify-center text-white shadow-xl shadow-blue-200 mb-8">
-              <Droplets size={48} />
+          <div className="p-10 flex flex-col items-center">
+            <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center text-white shadow-xl shadow-blue-200 mb-6">
+              <Droplets size={36} />
             </div>
-            <h1 className="text-3xl font-black text-slate-900 mb-2">Quản Lý Nước</h1>
-            <p className="text-slate-500 font-medium mb-10">Hệ thống quản lý khai thác và tiêu thụ nước thông minh</p>
+            <h1 className="text-2xl font-black text-slate-900 mb-1">Quản Lý Nước</h1>
+            <p className="text-slate-500 font-medium mb-8 text-center">
+              {isRegistering ? 'Tạo tài khoản mới để bắt đầu' : 'Đăng nhập để quản lý hệ thống'}
+            </p>
             
-            <button
-              onClick={() => signInWithPopup(auth, new GoogleAuthProvider())}
-              className="w-full flex items-center justify-center gap-3 bg-white border-2 border-slate-200 py-4 rounded-2xl font-bold text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition-all active:scale-95"
-            >
-              <img src="https://www.google.com/favicon.ico" className="w-5 h-5" alt="Google" />
-              Đăng nhập với Google
-            </button>
+            <form onSubmit={handleAuth} className="w-full space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 ml-1">Email</label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all font-medium"
+                  placeholder="name@company.com"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 ml-1">Mật khẩu</label>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all font-medium"
+                  placeholder="••••••••"
+                  required
+                />
+              </div>
+
+              {authError && (
+                <div className="p-3 bg-red-50 border border-red-100 rounded-xl text-red-600 text-sm font-medium flex items-center gap-2">
+                  <LogIn size={16} />
+                  {authError}
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={authLoading}
+                className="w-full bg-blue-600 text-white py-4 rounded-xl font-bold hover:bg-blue-700 transition-all active:scale-95 disabled:opacity-50 disabled:active:scale-100 shadow-lg shadow-blue-200 flex items-center justify-center gap-2"
+              >
+                {authLoading ? (
+                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <>
+                    <LogIn size={20} />
+                    {isRegistering ? 'Đăng ký tài khoản' : 'Đăng nhập'}
+                  </>
+                )}
+              </button>
+            </form>
+
+            <div className="mt-6 text-center">
+              <button
+                onClick={() => {
+                  setIsRegistering(!isRegistering);
+                  setAuthError(null);
+                }}
+                className="text-sm font-bold text-blue-600 hover:text-blue-700 transition-all"
+              >
+                {isRegistering ? 'Đã có tài khoản? Đăng nhập ngay' : 'Chưa có tài khoản? Đăng ký ngay'}
+              </button>
+            </div>
             
-            <p className="mt-8 text-xs text-slate-400 font-medium">
-              Bằng cách đăng nhập, bạn đồng ý với các điều khoản sử dụng của chúng tôi.
+            <p className="mt-8 text-xs text-slate-400 font-medium text-center">
+              Bằng cách tiếp tục, bạn đồng ý với các điều khoản sử dụng của chúng tôi.
             </p>
           </div>
         </div>

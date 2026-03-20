@@ -62,7 +62,7 @@ export default function Layout({ children, activeTab, setActiveTab, user }: Layo
               <User size={16} />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-slate-900 truncate">{user?.displayName || 'Người dùng'}</p>
+              <p className="text-sm font-semibold text-slate-900 truncate">{user?.displayName || user?.email?.split('@')[0] || 'Người dùng'}</p>
               <p className="text-xs text-slate-500 truncate">{user?.email}</p>
             </div>
           </div>
